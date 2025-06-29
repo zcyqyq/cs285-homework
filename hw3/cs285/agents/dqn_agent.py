@@ -51,7 +51,7 @@ class DQNAgent(nn.Module):
         # TODO(student): get the action from the critic using an epsilon-greedy strategy
         p = np.random.rand()
         if p > epsilon:
-            action = torch.argmax(self.critic(observation))
+            action = self.critic(observation).argmax(dim=1)
         else:
             action = torch.randint(0, self.num_actions, (1,))
 
@@ -81,12 +81,12 @@ class DQNAgent(nn.Module):
                 next_action = torch.argmax(next_qa_values, dim=-1)
             
             next_q_values = torch.gather(next_qa_values, dim=-1, index=next_action.unsqueeze(1))
-            target_values = reward.unsqueeze(1) + self.discount * next_q_values * (1 - done.unsqueeze(1))
+            target_values = reward.unsqueeze(1) + self.discount * next_q_values * (~ done.unsqueeze(1))
 
         # TODO(student): train the critic with the target values
         qa_values = self.critic(obs)
         q_values = torch.gather(qa_values, dim=-1, index=action.unsqueeze(1)) # Compute from the data actions; see torch.gather
-        loss = nn.functional.mse_loss(q_values, target_values)
+        loss = self.critic_loss(q_values, target_values)
 
 
         self.critic_optimizer.zero_grad()
